@@ -102,19 +102,20 @@ All Eurostat series pinned to **2026-06 extract**. PWT version **10.01** (Feenst
 
 ## Key hypotheses (pre-registered)
 
-Status as of Stage 09 (`src/R/09_robustness.R` — see `reports/09_robustness_summary.csv`
-for point estimates once the script has been run; R execution is currently deferred,
-see note below).
+Status as of Stage 09 (`src/R/09_robustness.R`, run 2026-09-25 — see
+`reports/09_robustness_summary.csv` for full point estimates). Findings are
+reported honestly: only H4 (a pre-existing rejection) and H6 came back
+supported — the rest are genuine nulls, not forced to look positive.
 
-| H | Statement | Tested by |
-|---|---|---|
-| H1 | γ_GOVERD > γ_BERD (public R&D effect > private), p < 0.05 | Stage 09 (first test) |
-| H2 | LP impulse response of GERD on TFP peaks at 5–7 years | Stage 05, robustness-checked in Stage 09 |
-| H3 | GERD × distance-to-frontier interaction is negative | Stage 09 direct test (Stage 03 tested a related but not identical krd×dtf/gerd×hc specification) |
-| H4 | Indirect / direct SDM effect ratio > 1 (research-collaboration weights) | Stage 06 — **rejected**: spatial spillovers non-significant across all three weight matrices (λ=0.107, p=0.33). Stage 09 confirms via leave-one-country-out jackknife that this null isn't driven by a single country. |
-| H5 | Catch-up cluster absorbs more spillovers than innovator cluster | Stage 09 (first test) |
-| H6 | Bootstrap-ARI ≥ 0.75 for k=2 clusters | Stage 09 (first test) |
-| H7 | GERD coefficient smaller in 2011–2024 than 1998–2010 (Bloom et al.) | Stage 09 (first test; `reports/main.Rmd` previously noted this explicitly as untested) |
+| H | Statement | Tested by | Result |
+|---|---|---|---|
+| H1 | γ_GOVERD > γ_BERD (public R&D effect > private), p < 0.05 | Stage 09 (first test) | Not supported (diff=+0.040, p=0.35) |
+| H2 | LP impulse response of GERD on TFP peaks at 5–7 years | Stage 05, robustness-checked in Stage 09 | Not supported (peak h=8 baseline, h=2 ex-COVID) |
+| H3 | GERD × distance-to-frontier interaction is negative | Stage 09 direct test (Stage 03 tested a related but not identical krd×dtf/gerd×hc specification) | Not supported (p=0.79, and sign not robust to swapping dtf for rel_frontier) |
+| H4 | Indirect / direct SDM effect ratio > 1 (research-collaboration weights) | Stage 06 — **rejected**: spatial spillovers non-significant across all three weight matrices (λ=0.107, p=0.33). Stage 09 confirms via leave-one-country-out jackknife that this null isn't driven by a single country. | Rejected (Stage 06); null confirmed robust (29/29 jackknife) |
+| H5 | Catch-up cluster absorbs more spillovers than innovator cluster | Stage 09 (first test) | Not supported (interaction p=0.43) |
+| H6 | Bootstrap-ARI ≥ 0.75 for k=2 clusters | Stage 09 (first test) | **Supported** (mean ARI=1.000, B=200) |
+| H7 | GERD coefficient smaller in 2011–2024 than 1998–2010 (Bloom et al.) | Stage 09 (first test; `reports/main.Rmd` previously noted this explicitly as untested) | Not supported (|coef| grew 0.002→0.014, opposite of the Bloom direction) |
 
 ---
 
