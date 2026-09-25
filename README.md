@@ -22,34 +22,35 @@ moderation, and cluster stability.
 
 ```mermaid
 flowchart TD
-    Eurostat["Eurostat (2026-06 extract)"] --> S01["Stage 01 — Data pipeline<br/>run_stage01.py -> panel.duckdb"]
+    Eurostat["Eurostat (2026-06 extract)"] --> S01["Stage 01 — src/python/<br/>run_stage01.py -> panel.duckdb"]
     PWT["Penn World Table 10.01"] --> S01
     Manual["Manual: Heritage IEF,<br/>Ireland GNI*, PISA"] --> S01
     S01 --> Gate["Coverage gate<br/>>=95% non-missing, 29x27 country-years"]
-    Gate --> S02["Stage 02 — Thesis replication (R)"]
-    S02 --> S03["Stage 03 — Endogenous growth"]
-    S03 --> S04["Stage 04 — System GMM + LPs"]
-    S04 --> S05["Stage 05 — Clustering v2"]
-    S05 --> S06["Stage 06 — Heterogeneity"]
-    S06 --> S07["Stage 07 — Spatial (SDM)"]
-    S07 --> S08["Stage 08 — CV strategy"]
-    S08 --> S09["Stage 09 — Robustness"]
-    S09 --> S10["Stage 10 — Paper draft (main.tex)"]
+    Gate --> S02["Stage 02 — src/R/02_replicate_thesis.R"]
+    S02 --> S03["Stage 03 — src/R/03_extended_models.R"]
+    S03 --> S04["Stage 04 — src/R/04_system_gmm.R"]
+    S04 --> S05["Stage 05 — src/R/05_local_projections.R"]
+    S05 --> S06["Stage 06 — src/R/06_spatial_durbin.R"]
+    S06 --> S07["Stage 07 — src/R/07_causal_forest.R"]
+    S07 --> S08["Stage 08 — src/R/08_clustering.R"]
+    S08 --> S09["Stage 09 — Robustness (not started)"]
+    S08 --> Draft["reports/main.Rmd -> main.pdf<br/>(rendered draft already exists)"]
 ```
+
+Note: stages actually live in `src/python/` (ingest) and `src/R/` (econometrics) as numbered scripts, not in a `notebooks/` folder — the folder exists but is currently empty.
 
 ## Execution order
 
 ```
 Week 1  Stage 01 — Data pipeline      python src/python/run_stage01.py
 Week 2  Stage 02 — Replication        Rscript src/R/02_replicate_thesis.R
-Week 2  Stage 03 — Endogenous growth  notebooks/03_endogenous_growth.qmd
-Week 3  Stage 04 — GMM + LPs          notebooks/04_sysgmm.qmd
-Week 4  Stage 05 — Clustering v2      notebooks/05_clustering_v2.ipynb
-Week 4  Stage 06 — Heterogeneity      notebooks/06_heterogeneity.qmd
-Week 5  Stage 07 — Spatial            notebooks/07_spatial.qmd
-Week 6  Stage 08 — CV                 reports/08_cv_strategy.md
-Week 6  Stage 09 — Robustness         notebooks/09_robustness.qmd
-Week 7  Stage 10 — Paper draft
+Week 2  Stage 03 — Extended models    Rscript src/R/03_extended_models.R
+Week 3  Stage 04 — System GMM         Rscript src/R/04_system_gmm.R
+Week 3  Stage 05 — Local projections  Rscript src/R/05_local_projections.R
+Week 4  Stage 06 — Spatial Durbin     Rscript src/R/06_spatial_durbin.R
+Week 5  Stage 07 — Causal forest      Rscript src/R/07_causal_forest.R
+Week 6  Stage 08 — Clustering v2      Rscript src/R/08_clustering.R
+Week 7  Stage 10 — Paper draft        reports/main.Rmd (rendered -> reports/main.pdf)
 ```
 
 ---
