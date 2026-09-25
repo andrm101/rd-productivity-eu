@@ -1,0 +1,8 @@
+hypothesis,statement,finding,supported,notes
+H1,"gamma_GOVERD > gamma_BERD, p<0.05","goverd=0.0373, berd=-0.0021, diff=0.0395, p=0.3493",FALSE,First formal test (never run in Stages 02-08).
+H2,LP peak of GERD-on-TFP IRF at h=5-7 (catch-up group),"peak h=8 (baseline), h=2 (ex-COVID)",FALSE,Robustness check on existing Stage 05 estimate.
+H3,GERD x distance-to-frontier interaction is negative,gerd_pct:dtf=-0.0057 (p=0.7941); gerd_pct:rel_frontier=-0.0016 (p=0.9679),FALSE,"Direct test of the literal H3 statement (Stage 03 tested krd_x_dtf/gerd_x_hc, a related but not identical specification); rel_frontier swap is the robustness check."
+H4,Indirect/direct SDM effect ratio > 1 (research-collaboration weights),REJECTED in Stage 06 (non-sig across W1/W2/W3); jackknife: 29/29 leave-one-out runs still non-sig,FALSE,Null result is robust -- not driven by any single country.
+H5,Catch-up cluster absorbs more spillovers than innovator cluster,"interaction (CatchUp - Innovator)=-0.0249, p=0.4318",FALSE,"First formal test (never run in Stages 02-08). Given H4's own spillover term is non-significant overall, treat this as exploratory, not confirmatory."
+H6,Bootstrap-ARI >= 0.75 for k=2 clusters,mean ARI=1.000 over B=200 bootstrap replicates,TRUE,First formal test (never run in Stage 08).
+H7,GERD coefficient smaller in 2011-2024 than 1998-2010 (Bloom et al.),"|coef| 1998-2010=0.0016, 2011-2024=0.0135",FALSE,First formal test (never run before; reports/main.Rmd explicitly noted this as untested).
