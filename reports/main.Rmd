@@ -66,6 +66,9 @@ hte_tbl     <- read.csv("reports/07_hte_summary.csv")
 cluster_tbl <- read.csv("reports/08_cluster_assignments.csv")
 cluster_prof<- read.csv("reports/08_cluster_profiles.csv")
 km_diag     <- read.csv("reports/08_kmeans_diagnostics.csv")
+robustness_tbl <- if (file.exists("reports/09_robustness_summary.csv")) {
+  read.csv("reports/09_robustness_summary.csv")
+} else NULL
 ```
 
 \newpage
@@ -470,6 +473,44 @@ knitr::include_graphics(fig("08_scatter_dtf_krd.png"))
 
 ```{r fig-cluster-cate, fig.cap="CATE distribution by cluster. Causal forest estimates (Stage 07) grouped by K-means cluster (Stage 08)."}
 knitr::include_graphics(fig("08_cate_by_cluster.png"))
+```
+
+## Robustness
+
+Table \@ref(tab:robustness-table) reports the status of all seven pre-registered
+hypotheses (README "Key hypotheses"). Two clarifications on scope: first, H2, H3,
+and H4 build on point estimates already reported above (Stages 03, 05, 06); H1, H5,
+H6, and H7 had no prior formal test and are estimated here for the first time.
+Second, H4's finding is a robustness check *of a null result* -- Stage 06 found
+non-significant spatial spillovers across all three weight matrices, and the
+leave-one-country-out jackknife here confirms that null isn't an artefact of any
+single country's influence, rather than testing whether the original (rejected)
+hypothesis holds.
+
+```{r robustness-table}
+if (!is.null(robustness_tbl)) {
+  knitr::kable(
+    robustness_tbl |> select(hypothesis, statement, finding, supported),
+    format    = "latex",
+    booktabs  = TRUE,
+    caption   = "Robustness of pre-registered hypotheses H1-H7.",
+    col.names = c("H", "Statement", "Finding", "Supported"),
+    escape    = TRUE,
+    linesep   = ""
+  ) |>
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down")) |>
+    kableExtra::footnote(
+      general = "H1, H5, H6, H7: first formal test (Stage 09). H2, H3: robustness check of an existing Stage 03/05 estimate. H4: robustness check confirming Stage 06's null (rejected) result is not driven by a single country.",
+      general_title = "Note:", footnote_as_chunk = TRUE)
+} else {
+  cat("Robustness table not yet generated. Run src/R/09\\_robustness.R.")
+}
+```
+
+```{r fig-bootstrap-ari, fig.cap="Bootstrap-ARI distribution (B=200) for the k=2 country clustering (H6). Dashed line: pre-registered threshold of 0.75.", out.width="80%"}
+if (file.exists(fig("09_bootstrap_ari_hist.png"))) {
+  knitr::include_graphics(fig("09_bootstrap_ari_hist.png"))
+}
 ```
 
 # Discussion {#sec:discussion}

@@ -33,8 +33,8 @@ flowchart TD
     S05 --> S06["Stage 06 — src/R/06_spatial_durbin.R"]
     S06 --> S07["Stage 07 — src/R/07_causal_forest.R"]
     S07 --> S08["Stage 08 — src/R/08_clustering.R"]
-    S08 --> S09["Stage 09 — Robustness (not started)"]
-    S08 --> Draft["reports/main.Rmd -> main.pdf<br/>(rendered draft already exists)"]
+    S08 --> S09["Stage 09 — src/R/09_robustness.R<br/>-> reports/09_robustness_summary.csv"]
+    S09 --> Draft["reports/main.Rmd -> main.pdf<br/>(rendered draft already exists)"]
 ```
 
 Note: stages actually live in `src/python/` (ingest) and `src/R/` (econometrics) as numbered scripts, not in a `notebooks/` folder — the folder exists but is currently empty.
@@ -50,6 +50,7 @@ Week 3  Stage 05 — Local projections  Rscript src/R/05_local_projections.R
 Week 4  Stage 06 — Spatial Durbin     Rscript src/R/06_spatial_durbin.R
 Week 5  Stage 07 — Causal forest      Rscript src/R/07_causal_forest.R
 Week 6  Stage 08 — Clustering v2      Rscript src/R/08_clustering.R
+Week 6  Stage 09 — Robustness         Rscript src/R/09_robustness.R
 Week 7  Stage 10 — Paper draft        reports/main.Rmd (rendered -> reports/main.pdf)
 ```
 
@@ -101,15 +102,19 @@ All Eurostat series pinned to **2026-06 extract**. PWT version **10.01** (Feenst
 
 ## Key hypotheses (pre-registered)
 
-| H | Statement |
-|---|---|
-| H1 | γ_GOVERD > γ_BERD (public R&D effect > private), p < 0.05 |
-| H2 | LP impulse response of GERD on TFP peaks at 5–7 years |
-| H3 | GERD × distance-to-frontier interaction is negative |
-| H4 | Indirect / direct SDM effect ratio > 1 (research-collaboration weights) |
-| H5 | Catch-up cluster absorbs more spillovers than innovator cluster |
-| H6 | Bootstrap-ARI ≥ 0.75 for k=2 clusters |
-| H7 | GERD coefficient smaller in 2011–2024 than 1998–2010 (Bloom et al.) |
+Status as of Stage 09 (`src/R/09_robustness.R` — see `reports/09_robustness_summary.csv`
+for point estimates once the script has been run; R execution is currently deferred,
+see note below).
+
+| H | Statement | Tested by |
+|---|---|---|
+| H1 | γ_GOVERD > γ_BERD (public R&D effect > private), p < 0.05 | Stage 09 (first test) |
+| H2 | LP impulse response of GERD on TFP peaks at 5–7 years | Stage 05, robustness-checked in Stage 09 |
+| H3 | GERD × distance-to-frontier interaction is negative | Stage 09 direct test (Stage 03 tested a related but not identical krd×dtf/gerd×hc specification) |
+| H4 | Indirect / direct SDM effect ratio > 1 (research-collaboration weights) | Stage 06 — **rejected**: spatial spillovers non-significant across all three weight matrices (λ=0.107, p=0.33). Stage 09 confirms via leave-one-country-out jackknife that this null isn't driven by a single country. |
+| H5 | Catch-up cluster absorbs more spillovers than innovator cluster | Stage 09 (first test) |
+| H6 | Bootstrap-ARI ≥ 0.75 for k=2 clusters | Stage 09 (first test) |
+| H7 | GERD coefficient smaller in 2011–2024 than 1998–2010 (Bloom et al.) | Stage 09 (first test; `reports/main.Rmd` previously noted this explicitly as untested) |
 
 ---
 
