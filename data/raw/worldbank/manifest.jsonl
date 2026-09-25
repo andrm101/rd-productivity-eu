@@ -1,0 +1,1 @@
+{"source_id": "worldbank_stage01", "source_url": "https://api.worldbank.org/v2/", "vintage": "2026-06", "retrieved": "2026-05-23T09:18:22.162467+00:00", "files": [{"path": "data\\raw\\worldbank\\wb_series.parquet", "sha256": "3c1acb084fafcc53b086b5f029277ab70bc01916fe0b2de4235f8165f26fd2d2"}]}

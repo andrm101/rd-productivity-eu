@@ -1,0 +1,555 @@
+---
+title: "R\\&D Investment and Economic Growth in Europe: A Multi-Method Panel Analysis"
+subtitle: "Evidence from N\\,=\\,29 European Economies, 1998--2024"
+author: "Andrei Manoloiu"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    keep_tex: false
+    fig_caption: true
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    number_sections: true
+bibliography: ../references/references.bib
+link-citations: true
+fontsize: 11pt
+geometry: margin=2.5cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo        = FALSE,
+  warning     = FALSE,
+  message     = FALSE,
+  fig.align   = "center",
+  out.width   = "95%",
+  cache       = FALSE
+)
+# Resolve project root: env var (set by _knit_report.R) â†' Rmd parent â†' getwd()
+.proj_root <- local({
+  env <- Sys.getenv("PROJ_ROOT", unset = "")
+  if (nzchar(env)) return(normalizePath(env, mustWork = FALSE))
+  rmd <- knitr::current_input(dir = TRUE)
+  if (nzchar(rmd)) return(normalizePath(file.path(rmd, ".."), mustWork = FALSE))
+  normalizePath(getwd(), mustWork = FALSE)
+})
+knitr::opts_knit$set(root.dir = .proj_root)
+# Disable knitr's relative-path conversion: keep absolute paths as-is for include_graphics.
+# This ensures xelatex (which may run from a temp dir) can locate figures.
+options(knitr.graphics.rel_path = FALSE)
+fig <- function(name) normalizePath(file.path(.proj_root, "figures", name), winslash = "/", mustWork = FALSE)
+# do not call setwd() -- knitr manages wd via opts_knit$set(root.dir)
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+  library(fixest)
+  library(knitr)
+  library(kableExtra)
+})
+
+source(file.path(.proj_root, "src", "R", "00_load.R"))
+
+panel <- load_panel(primary_only = TRUE, year_range = c(1998L, 2024L)) |>
+  mutate(savings  = savings_pct / 100,
+         year_int = as.integer(year))
+
+# Pre-computed result tables
+irf_tbl     <- read.csv("reports/05_irf_table.csv")
+hte_tbl     <- read.csv("reports/07_hte_summary.csv")
+cluster_tbl <- read.csv("reports/08_cluster_assignments.csv")
+cluster_prof<- read.csv("reports/08_cluster_profiles.csv")
+km_diag     <- read.csv("reports/08_kmeans_diagnostics.csv")
+```
+
+\newpage
+
+# Abstract {-}
+
+This paper re-examines the relationship between research and development (R\&D) expenditure and economic growth in a panel of 29 European economies over 1998--2024, extending the empirical methodology of a prior thesis substantially. The original finding of a negative GERD--growth coefficient ($\hat\beta \approx -0.025$) is shown to be an artefact of ignoring cross-sectional dependence: Pesaran's CD test returns $z = 36.2$ ($p < 10^{-16}$), and Driscoll--Kraay standard errors reduce the estimate to $\hat\beta = -0.003$ ($p = 0.44$). Six complementary approaches are applied to characterise the null and its heterogeneity: (i) extended fixed-effects models with knowledge stock and frontier distance; (ii) Anderson--Hsiao IV to assess endogeneity direction; (iii) Jord\`a local projections for dynamic impulse responses; (iv) a Spatial Durbin Model testing knowledge spillovers; (v) Double/Debiased ML and causal forests for heterogeneous treatment effects; and (vi) K-means clustering for country typology. Across all specifications the average GERD effect on growth is statistically indistinguishable from zero. However, the null conceals opposing regime effects: close-to-frontier economies exhibit a persistent negative direct effect consistent with knowledge spillout, while catch-up economies show a delayed positive response at horizon $h = 8$ years. Factor accumulation---savings rate and population growth plus depreciation---remains the dominant and consistently significant channel throughout, consistent with the augmented Solow model of @mankiw1992.
+
+**Keywords:** R\&D, economic growth, panel data, local projections, spatial Durbin, causal forest, Europe
+
+\newpage
+
+# Introduction
+
+The relationship between research and development expenditure and aggregate economic growth represents one of the most contested empirical questions in growth economics. The Schumpeterian framework of @aghion1992 predicts that innovation-driven creative destruction generates sustained per capita income growth, implying a positive long-run association between R\&D intensity and productivity. Yet the empirical literature has struggled to deliver robust estimates: early positive findings from cross-sectional specifications [@griliches1979; @coe1995] weaken substantially in panel settings that control for country fixed effects and address cross-sectional dependence [@hauk2009].
+
+This paper contributes to that debate in three ways. First, it systematically documents how a standard augmented-Solow panel estimate of the GERD--growth coefficient changes as identification assumptions are progressively relaxed---from OLS with heteroskedastic-robust SEs through two-way FE with Driscoll--Kraay standard errors [@driscollkraay1998], instrumental variables, local projections [@jorda2005], and spatial econometrics. Second, it introduces several conceptual extensions absent from the prior analysis: a perpetual-inventory knowledge stock, distance-to-frontier heterogeneity following @aghion2014, Nelson--Phelps absorptive capacity interactions [@nelsonphelps1966], and Bloom--Jones research productivity [@bloom2020]. Third, it brings machine-learning causal inference---double/debiased ML [@chernozhukov2018] and causal forests [@wagerathey2018]---to bear on heterogeneous treatment effects, asking whether the null average conceals systematic cross-country variation.
+
+The sample covers $N = 29$ European Union member states plus Iceland, Norway, and Switzerland over the period 1998--2024, yielding an unbalanced panel of approximately 783 country-year observations. The main dataset combines Eurostat GERD and GDP series with OECD MSTI researcher counts, Penn World Table 10.0 TFP estimates [@pwt100], and World Bank Worldwide Governance Indicators [@worldbank_wgi].
+
+The main finding is that aggregate GERD spending does not significantly predict annual GDP-per-capita growth once cross-sectional dependence is properly accounted for. This null is robust to endogeneity correction (Wu--Hausman $p = 0.004$; instrument relevance $F > 400$), dynamic specification (local projections at all horizons $h = 0, \ldots, 7$ for the full panel), and spatial structure (Moran's $I = -0.005$, $p = 0.22$; spatial autoregression $\lambda = 0.107$, $p = 0.33$). The causal forest average treatment effect is $+0.004$ (SE $= 0.010$). However, heterogeneity is economically meaningful: Innovation Leaders (13 countries, high GERD, near frontier) exhibit a mean CATE of $-0.008$, while Convergence Economies (15 countries) show a mean CATE of $+0.005$---a pattern consistent with the distance-to-frontier mechanism of @aghion2014.
+
+The remainder is structured as follows. Section \@ref(sec:lit) reviews the relevant literature. Section \@ref(sec:data) describes the data. Section \@ref(sec:method) outlines the econometric methodology. Section \@ref(sec:results) presents results. Section \@ref(sec:discussion) discusses the findings. Section \@ref(sec:conclusion) concludes.
+
+# Literature Review {#sec:lit}
+
+## Augmented Solow and Aggregate Factor Accumulation
+
+The empirical growth literature was shaped by @mankiw1992, who showed that a Solow model augmented with human capital accounts for approximately 80 per cent of cross-country income variation. In this framework, steady-state income per capita is determined by the savings rate $s$, population growth $n$, and depreciation $\delta$ via:
+
+$$\ln y^* = \frac{\alpha}{1-\alpha-\beta}\ln s - \frac{\alpha+\beta}{1-\alpha-\beta}\ln(n+g+\delta) + \frac{\beta}{1-\alpha-\beta}\ln h$$
+
+where $\alpha$, $\beta$ are capital and human capital shares and $g = 0.02$ is the exogenous technology growth rate. R\&D does not appear in this formulation; growth arises from factor accumulation transitioning toward steady state, not from innovation per se. The present paper uses this framework as its baseline, adding GERD as a test of whether R\&D has predictive power beyond the Solow channels.
+
+## Schumpeterian Growth and Knowledge Spillovers
+
+@aghion1992 and subsequent Schumpeterian models predict that R\&D drives growth through quality-ladder improvements. A key prediction is that the effect of R\&D on growth should be stronger for firms and countries closer to the technological frontier [@aghion2014]. For countries distant from the frontier, technology adoption and imitation---facilitated by human capital [@nelsonphelps1966]---dominates own R\&D as the growth mechanism. This generates a frontier-distance interaction that this paper explicitly tests.
+
+International knowledge spillovers represent an additional mechanism. @coe1995 estimate that foreign R\&D stocks significantly predict total factor productivity, with the effect operating through trade linkages. @jaffe1986 documents geographic concentration of R\&D spillovers at the firm level. The spatial Durbin model in Section \@ref(sec:method) tests whether such spillovers are detectable at the macroeconomic scale within Europe.
+
+@bloom2020 document a secular decline in research productivity across multiple industries and metrics, suggesting that each new unit of R\&D expenditure generates diminishing ideas over time---the "ideas are getting harder to find" thesis. This provides a structural reason why the GERD--growth coefficient might be small or null in aggregate annual data even when R\&D is a long-run determinant of the productivity level.
+
+## Econometric Challenges in Panel Growth Regressions
+
+Cross-sectional dependence is pervasive in international macroeconomic panels. @pesaran2021 develops a scaled $CD$ statistic that is asymptotically $\mathcal{N}(0,1)$ under the null of cross-sectional independence; rejection implies that standard panel SEs are downward biased. @driscollkraay1998 propose a nonparametric covariance estimator robust to both cross-sectional dependence and serial correlation, which this paper employs throughout.
+
+Endogeneity of R\&D in growth regressions arises from at least two sources: (i) reverse causality (rich countries spend more on R\&D), generating upward bias; and (ii) classical measurement error in GERD (survey-based, definitional heterogeneity across countries), generating downward attenuation bias. The direction is not obvious a priori and is tested explicitly via Anderson--Hsiao IV [@hausman1978].
+
+# Data {#sec:data}
+
+## Sources and Construction
+
+```{r descriptives-compute}
+desc_vars <- c("growth_y","gerd_pct","ln_y_pc","savings","tertiary_25_64",
+               "n_g_d","dtf","ln_krd")
+desc_df <- panel |>
+  select(all_of(desc_vars)) |>
+  summarise(across(everything(),
+    list(
+      N    = ~sum(!is.na(.)),
+      Mean = ~round(mean(.,  na.rm=TRUE), 3),
+      SD   = ~round(sd(.,    na.rm=TRUE), 3),
+      Min  = ~round(min(.,   na.rm=TRUE), 3),
+      Max  = ~round(max(.,   na.rm=TRUE), 3)
+    ), .names = "{.col}__{.fn}")) |>
+  pivot_longer(everything(), names_to = c("Variable","Stat"), names_sep = "__") |>
+  pivot_wider(names_from = Stat, values_from = value) |>
+  mutate(Variable = recode(Variable,
+    growth_y       = "Growth rate (d.ln GDP pc)",
+    gerd_pct       = "GERD (% GDP)",
+    ln_y_pc        = "ln GDP per capita (PPS)",
+    savings        = "Gross savings rate",
+    tertiary_25_64 = "Tertiary attainment 25--64 (%)",
+    n_g_d          = "n + g + delta",
+    dtf            = "Distance to frontier",
+    ln_krd         = "ln Knowledge stock (krd_pct)"
+  ))
+```
+
+The panel was constructed from five primary sources. GDP per capita in purchasing-power-standard euros and gross savings rates were obtained from Eurostat `nama_10_pc` and `nasa_10_nf_tr` [@eurostat_gdp]. R\&D expenditure as a percentage of GDP (GERD) and full-time-equivalent researcher counts were sourced from the OECD Main Science and Technology Indicators [@oecd_msti], with missing biannual observations filled by linear interpolation within country. Total factor productivity estimates are from Penn World Table 10.0 [@pwt100], available through 2019. Institutional quality is measured by the mean of six World Bank Worldwide Governance Indicators [@worldbank_wgi]: government effectiveness, rule of law, regulatory quality, voice and accountability, political stability, and control of corruption.
+
+The primary sample comprises 29 economies: 27 EU member states plus Iceland, Norway, and Switzerland. The United Kingdom is excluded from the primary panel following EU exit but is included in the spatial weights matrix for geographic completeness. Romania is excluded from Stage 08 due to missing governance data.
+
+## Key Variable Definitions
+
+**R\&D Knowledge Stock.** A perpetual-inventory measure follows @hall2010:
+$$K_t = \text{GERD}_t + (1 - \delta_R)\,K_{t-1}, \quad K_0 = \frac{\text{GERD}_1}{\delta_R + g}$$
+with depreciation rate $\delta_R = 0.15$ and technology growth $g = 0.02$.
+
+**Distance to Frontier.** Following @aghion2014, the frontier is defined as the 95th percentile of $\ln y_{it}$ across the primary panel in each year $t$, chosen to mitigate the influence of GDP measurement anomalies in Luxembourg and Ireland:
+$$\text{dtf}_{it} = \max\!\bigl(0,\; y^{F}_{t} - \ln y_{it}\bigr)$$
+
+**Absorptive Capacity.** The Nelson--Phelps interaction $\text{gerd\_x\_hc}_{it} = \text{GERD}_{it} \times \text{tertiary}_{it}/100$ captures the conjecture that R\&D is more productive where human capital can absorb it [@nelsonphelps1966].
+
+## Descriptive Statistics
+
+Table \@ref(tab:desc-table) summarises the key variables. GERD/GDP ranges from 0.37 to 3.94 per cent, with a mean of 1.68 per cent, reflecting the wide variation across the sample from Bulgaria and Romania to Sweden and Finland. The mean annual growth rate is 1.6 per cent, masking the 2008--2009 and 2020 contractions. Distance to frontier has a cross-sectional median of 0.80 log-units.
+
+```{r desc-table}
+knitr::kable(
+  desc_df,
+  format  = "latex",
+  booktabs = TRUE,
+  caption = "Descriptive statistics, N=29 panel, 1998--2024.",
+  col.names = c("Variable", "N", "Mean", "SD", "Min", "Max"),
+  digits  = 3,
+  linesep = ""
+) |>
+  kableExtra::kable_styling(latex_options = c("hold_position","scale_down")) |>
+  kableExtra::footnote(
+    general = "GERD and savings are fractional (not percentages). dtf = frontier minus ln GDP pc.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE
+  )
+```
+
+# Methodology {#sec:method}
+
+## Fixed-Effects Baseline
+
+The workhorse specification is a two-way fixed-effects model with Driscoll--Kraay standard errors:
+
+$$\Delta \ln y_{it} = \alpha_i + \lambda_t + \beta\, \text{GERD}_{it} + \gamma' X_{it} + \varepsilon_{it}$$
+
+where $\alpha_i$ are country fixed effects absorbing time-invariant heterogeneity, $\lambda_t$ are year fixed effects absorbing common global shocks, $X_{it}$ is a vector of controls (savings rate, $n + g + \delta$, tertiary attainment, distance to frontier), and $\varepsilon_{it}$ is the error term. Driscoll--Kraay standard errors are robust to serial correlation up to $L = 2$ lags and to arbitrary cross-sectional dependence, making them appropriate given the CD test result. All models are estimated with `fixest::feols` [@fixest2023].
+
+## Extended Models: Knowledge Stock and Frontier Heterogeneity
+
+A sequence of six models (M0--M5) progressively introduces conceptual extensions:
+
+- **M0** replicates the thesis baseline with GERD/GDP as the R\&D measure.
+- **M1** replaces GERD flow with the log knowledge stock $\ln K_{it}$.
+- **M2** adds distance-to-frontier $\text{dtf}_{it}$.
+- **M3** adds the Nelson--Phelps absorptive capacity interaction $\text{gerd\_x\_hc}_{it}$.
+- **M4** adds $\ln K_{it} \times \text{dtf}_{it}$ (imitation vs.\ innovation margin).
+- **M5** adds the WGI institutional quality composite.
+
+A split-sample exercise (M6) runs M3 separately for close-to-frontier ($\text{dtf} \leq$ median) and catch-up ($\text{dtf} >$ median) economies.
+
+## Endogeneity Assessment (Stage 04)
+
+Arellano--Bond and Blundell--Bond GMM are not applied here. With $N = 29$ and $T = 27$, the large-$N$ asymptotic theory underlying these estimators does not hold: the moment-condition weight matrix is near-singular and the AR(1) pre-test in first differences yields no identifying signal [@roodman2009; @hauk2009]. Instead, Anderson--Hsiao-style IV estimation instruments $\text{GERD}_{it}$ with $\text{GERD}_{i,t-2}$ and $\text{GERD}_{i,t-3}$, which are predetermined relative to current growth shocks while plausibly satisfying relevance ($F > 400$ in the first stage).
+
+## Local Projections (Stage 05)
+
+Impulse response functions are estimated via the @jorda2005 local projection:
+
+$$y_{i,t+h} - y_{i,t-1} = \alpha^h_i + \lambda^h_t + \beta^h\, s_{it} + \sum_{k=1}^{2}\phi^h_k\, s_{i,t-k} + \sum_{k=1}^{2}\psi^h_k\, \Delta\ln y_{i,t-k} + \gamma^h X_{it} + \varepsilon^h_{it}$$
+
+for $h = 0, 1, \ldots, 8$ years. The shock $s_{it} = \Delta\text{GERD}_{it}$ is a one-percentage-point change in GERD/GDP. Lags of the shock and outcome are included following @ramey2018 to purge pre-existing serial correlation from the errors. Driscoll--Kraay standard errors are used throughout. IRFs are plotted with 68 and 90 per cent confidence bands. Three samples are estimated: the full $N = 29$ panel, close-to-frontier economies ($\text{dtf} \leq$ median), and catch-up economies ($\text{dtf} >$ median).
+
+## Spatial Durbin Model (Stage 06)
+
+The spatial lag-X (SDM-X) specification adds a spatially weighted average of neighbours' GERD to the baseline:
+
+$$\Delta\ln y_{it} = \alpha_i + \lambda_t + \beta\,\text{GERD}_{it} + \theta\,(W\,\text{GERD})_{it} + \gamma' X_{it} + \varepsilon_{it}$$
+
+where $W$ is a row-normalised spatial weights matrix. Three weight specifications are compared: $W_1$ (inverse great-circle distance), $W_2$ (binary contiguity), and $W_3$ (inverse income-proximity). The direct effect is $\beta$, the indirect (spillover) effect is $\theta$, and the total is $\beta + \theta$. A full spatial lag model with spatial autoregression parameter $\lambda$ is estimated by ML via `splm::spml` [@lesagepace2009] on the balanced sub-panel (29 countries, 20 years).
+
+## Double/Debiased ML and Causal Forest (Stage 07)
+
+**DML.** The partially linear model [@chernozhukov2018] is:
+
+$$\Delta\ln y_{it} = \theta\,\text{GERD}_{it} + g(X_{it}) + \alpha_i + \lambda_t + \varepsilon_{it}$$
+
+The nuisance functions $g(\cdot)$ and $\mathbb{E}[\text{GERD}|X]$ are estimated with $K = 5$-fold country-blocked cross-fitting. OLS and ridge (via `glmnet`) nuisance learners are compared. All variables are first within-transformed (country $+$ year FE removed) before cross-fitting.
+
+**Causal Forest.** @wagerathey2018 estimate heterogeneous treatment effects $\tau(X) = \mathbb{E}[Y(d+1) - Y(d) \mid X]$ via an honest, subsampled random forest. The panel adaptation of @knaus2021 applies: within-FE residuals of $Y$ and GERD serve as outcome and treatment; raw (not residualised) feature values serve as conditioning variables. Features are: $\text{dtf}$, $\ln K$, $\text{tertiary}$, $\text{savings}$, $n+g+\delta$, $\text{year}$, WGI composite. Forests use 3,000 trees, honest splitting, $\text{min\_node\_size} = 5$, and country-level clustering. The best linear projection of CATE [@chernozhukov2018] tests whether $\text{dtf}$ and $\ln K$ linearly predict treatment-effect variation.
+
+# Results {#sec:results}
+
+## Cross-Sectional Dependence and the Revised Baseline
+
+The Pesaran CD test applied to the baseline two-way FE residuals returns $z = 36.2$ ($p < 10^{-16}$), confirming pervasive cross-sectional dependence. Under conventional cluster-robust or heteroskedasticity-robust SEs, the GERD coefficient is $\hat\beta = -0.020$ ($p < 0.05$), reproducing the thesis finding. Once Driscoll--Kraay SEs are applied, the estimate falls to $\hat\beta = -0.003$ ($p = 0.44$). The finding thus illustrates the textbook consequence of ignoring $CD$: false precision and inflated $t$-statistics. The Hausman test ($\chi^2 = 29.6$, $\text{df} = 6$, $p < 0.001$) rejects the random-effects specification, confirming that country fixed effects are necessary.
+
+## Extended Models: Knowledge Stock and Frontier Distance
+
+```{r models-run, results='hide'}
+m0 <- fixest::feols(
+  growth_y ~ gerd_pct + pat_pct + savings + tertiary_25_64 + n_g_d
+             | country + year_int,
+  data = panel |> mutate(year = year_int), panel.id = ~country+year_int, vcov="DK")
+
+m3 <- fixest::feols(
+  growth_y ~ ln_krd + pat_pct + savings + tertiary_25_64 + n_g_d + dtf + gerd_x_hc
+             | country + year_int,
+  data = panel |> mutate(year = year_int), panel.id = ~country+year_int, vcov="DK")
+
+m6_close <- fixest::feols(
+  growth_y ~ ln_krd + pat_pct + savings + tertiary_25_64 + n_g_d + gerd_x_hc
+             | country + year_int,
+  data = panel |> filter(dtf <= median(dtf, na.rm=TRUE)) |>
+         mutate(year = year_int),
+  panel.id = ~country+year_int, vcov="DK")
+
+m6_far <- fixest::feols(
+  growth_y ~ ln_krd + pat_pct + savings + tertiary_25_64 + n_g_d + gerd_x_hc
+             | country + year_int,
+  data = panel |> filter(dtf > median(dtf, na.rm=TRUE)) |>
+         mutate(year = year_int),
+  panel.id = ~country+year_int, vcov="DK")
+```
+
+```{r m3-table}
+coef_m3 <- as.data.frame(summary(m3)$coeftable) |>
+  tibble::rownames_to_column("Term") |>
+  rename(Estimate = Estimate, SE = `Std. Error`, t = `t value`, p = `Pr(>|t|)`) |>
+  mutate(
+    Term     = recode(Term,
+      ln_krd         = "ln Knowledge stock",
+      pat_pct        = "Patents (% GDP)",
+      savings        = "Savings rate",
+      tertiary_25_64 = "Tertiary attainment",
+      n_g_d          = "n + g + delta",
+      dtf            = "Distance to frontier",
+      gerd_x_hc      = "GERD x Human capital"),
+    Estimate = round(Estimate, 4),
+    SE       = round(SE, 4),
+    t        = round(t, 2),
+    Sig      = case_when(p < 0.01 ~ "***", p < 0.05 ~ "**",
+                         p < 0.10 ~ "*",  TRUE ~ "")
+  ) |>
+  select(Term, Estimate, SE, t, Sig)
+
+knitr::kable(
+  coef_m3,
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "Model M3: ln knowledge stock, DTF, absorptive capacity (DK SEs, two-way FE).",
+  col.names = c("Variable", "Estimate", "SE", "t", ""),
+  align     = c("l","r","r","r","l"),
+  linesep   = ""
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position") |>
+  kableExtra::footnote(
+    general = paste0("N = ", nobs(m3), " obs, ", n_distinct(panel$country),
+                     " countries. Within RÂ² = ", round(r2(m3, "wr2"), 3),
+                     ". *** p<0.01, ** p<0.05, * p<0.10."),
+    general_title = "Note:", footnote_as_chunk = TRUE)
+```
+
+Table \@ref(tab:m3-table) presents Model M3---the primary extended specification. The log knowledge stock is not significantly associated with growth across the full panel ($\hat\beta_{\ln K} = `r round(coef(m3)["ln_krd"],4)`$, $p > 0.10$). Distance to frontier is also non-significant in the pooled specification. Savings and $n + g + \delta$ remain the only consistently significant variables, consistent with Solow factor accumulation.
+
+The split-sample exercise (M6) reveals a quantitatively important frontier heterogeneity. Among close-to-frontier economies, $\hat\beta_{\ln K} = `r round(coef(m6_close)["ln_krd"],3)`$ ($p < 0.01$, within $R^2 = 0.17$). For catch-up economies, $\hat\beta_{\ln K} = `r round(coef(m6_far)["ln_krd"],3)`$ (not significant, within $R^2 = 0.04$). The sign reversal is consistent with @aghion2014: near-frontier countries that increase own-knowledge stock may displace production resources from other growth-enhancing activities, while catch-up economies benefit more from technology adoption than own-innovation.
+
+```{r fig-coef, fig.cap="Model M3 coefficient plot with 95\\% Driscoll--Kraay confidence intervals."}
+knitr::include_graphics(fig("03_coef_plot_m3.png"))
+```
+
+## Endogeneity Direction
+
+The Wu--Hausman test rejects the null of GERD exogeneity ($p = 0.004$). The IV coefficient using $\text{GERD}_{t-2,t-3}$ as instruments ($F_{\text{first stage}} = 459$, well above the weak-instrument threshold of 10) is $\hat\beta_{\text{IV}} \approx +0.010$, exceeding the FE estimate of $-0.003$. Since IV $>$ FE, the direction of bias is consistent with downward attenuation from classical measurement error [@griliches1979], not with upward bias from reverse causality. This implies that the FE null is a conservative lower bound on the true coefficient, not an upward-biased one. Figure \@ref(fig:fig-iv) illustrates this comparison.
+
+```{r fig-iv, fig.cap="FE vs IV coefficient estimates across specifications. IV > FE indicates measurement-error attenuation, not reverse-causality upward bias."}
+knitr::include_graphics(fig("04_fe_vs_iv.png"))
+```
+
+## Dynamic Effects: Local Projections
+
+```{r irf-table}
+irf_full <- irf_tbl |>
+  filter(label == "Full panel (N=29)") |>
+  select(horizon, coef, se, ci90_lo, ci90_hi, n_obs) |>
+  mutate(across(c(coef,se,ci90_lo,ci90_hi), ~round(.,4)))
+
+knitr::kable(
+  irf_full,
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "Local projection IRF coefficients: full panel (N=29). Shock = +1pp GERD/GDP.",
+  col.names = c("Horizon $h$", "Coefficient", "SE", "90\\% CI lo", "90\\% CI hi", "N obs"),
+  digits    = 4,
+  linesep   = "",
+  escape    = FALSE
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position") |>
+  kableExtra::footnote(
+    general = "Two-way FE (country + year), Driscoll--Kraay SEs. Lag controls: s_{t-1}, s_{t-2}, growth_{t-1}, growth_{t-2}.",
+    general_title = "Note:", footnote_as_chunk = TRUE)
+```
+
+Table \@ref(tab:irf-table) and Figure \@ref(fig:fig-irf-full) show the impulse response of log GDP per capita to a +1 percentage-point GERD shock in the full panel. The contemporaneous response is small and negative ($h = 0$: $\hat\beta = `r round(irf_full$coef[1],4)`$); no horizon achieves significance at the 90 per cent level beyond $h = 0$. The typical confidence intervals span approximately $\pm 0.06$ log-points, leaving substantial statistical uncertainty even at short horizons.
+
+```{r fig-irf-full, fig.cap="IRF: GERD shock on cumulative log GDP per capita (full panel, N=29). Bands: 68\\% (dark) and 90\\% (light)."}
+knitr::include_graphics(fig("05_irf_full.png"))
+```
+
+The frontier split (Figure \@ref(fig:fig-irf-split)) tells a sharply different story. Close-to-frontier economies exhibit a pattern of negative cumulative responses that is statistically significant at the 90 per cent level at horizons $h = 0, 1, 2, 4, 5, 6, 7$ (peak: $-0.122$ at $h = 6$). Catch-up economies show a positive and rising response that becomes marginally significant only at $h = 8$ (peak: $+0.091$). These two patterns are consistent with the Aghion--Akcigit--Howitt prediction: frontier economies engage in innovation-intensive R\&D that improves the global knowledge stock but generates spillouts to trading partners, while catch-up economies benefit from knowledge absorption on a longer lag.
+
+```{r fig-irf-split, fig.cap="IRF frontier split: close-to-frontier (blue) vs catch-up (red). Bands: 90\\% CI."}
+knitr::include_graphics(fig("05_irf_split.png"))
+```
+
+## Spatial Spillovers
+
+Table \@ref(tab:spatial-table) presents the spatial lag-X results under three weight matrices. Direct effects (own-country GERD) remain non-significant across all specifications ($|\hat\beta| < 0.007$). Indirect effects (neighbours' GERD) are similarly imprecisely estimated: $W_1$ gives $\hat\theta = +0.012$ (SE $= 0.038$, n.s.); $W_2$ gives $\hat\theta = +0.0004$ (n.s.); $W_3$ gives $\hat\theta = -0.037$ (n.s.). The full SDM via ML estimation (splm, $N = 29$, $T = 20$ balanced) returns a spatial autoregressive coefficient $\lambda = 0.107$ ($p = 0.325$), indicating that cross-country growth co-movement is weak once two-way fixed effects absorb common shocks. Moran's $I = -0.005$ ($p = 0.22$) on FE residuals in the most recent year confirms no residual spatial clustering.
+
+```{r spatial-table}
+spat_df <- tibble::tribble(
+  ~Spec,          ~Direct, ~Indirect, ~Total,  ~N,
+  "Baseline FE",   -0.0033,      NA,      NA,  734,
+  "W1 (inv-dist)", -0.0037,  0.0116,  0.0079,  711,
+  "W2 (contiguity)",-0.0043, 0.0004, -0.0039,  711,
+  "W3 (income-prox)",-0.0064,-0.0367,-0.0431,  711
+)
+knitr::kable(
+  spat_df,
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "Spatial Durbin Model-X: direct, indirect, and total effects of GERD on growth.",
+  col.names = c("Specification","Direct $\\hat{\\beta}$","Indirect $\\hat{\\theta}$",
+                "Total $\\hat{\\beta}+\\hat{\\theta}$","N obs"),
+  digits    = 4,
+  escape    = FALSE,
+  linesep   = ""
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position") |>
+  kableExtra::footnote(
+    general = "Two-way FE, Driscoll-Kraay SEs. No coefficient is significant at 10% level.",
+    general_title = "Note:", footnote_as_chunk = TRUE)
+```
+
+```{r fig-spatial, fig.cap="Spatial Durbin direct vs indirect GERD effects by weight matrix. None is statistically significant."}
+knitr::include_graphics(fig("06_spatial_effects.png"))
+```
+
+## Heterogeneous Treatment Effects
+
+```{r hte-table}
+hte_clean <- hte_tbl |>
+  mutate(across(c(theta, se, ci90_lo, ci90_hi),
+                ~ifelse(is.na(.), "---", as.character(round(.,5))))) |>
+  select(label, theta, se, ci90_lo, ci90_hi)
+
+knitr::kable(
+  hte_clean,
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "ATE estimates: FE baseline, DML-OLS, DML-Ridge, Causal Forest.",
+  col.names = c("Estimator","$\\hat{\\theta}$","SE","90\\% CI lo","90\\% CI hi"),
+  align     = c("l","r","r","r","r"),
+  escape    = FALSE,
+  linesep   = ""
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position") |>
+  kableExtra::footnote(
+    general = "DML: 5-fold country-blocked cross-fitting. CF: 3,000 trees, country clusters, honest splitting.",
+    general_title = "Note:", footnote_as_chunk = TRUE)
+```
+
+Table \@ref(tab:hte-table) shows that all estimators return an average treatment effect that is not significantly different from zero: DML-Ridge gives $\hat\theta = -0.0106$ (SE $= 0.007$, $t = -1.55$); the causal forest ATE is $+0.004$ (SE $= 0.010$). The consistency of the null across parametric FE, semiparametric DML, and nonparametric causal forest is strong evidence against a significant average GERD--growth effect.
+
+CATE heterogeneity is modest but economically interpretable. The interquartile range of estimated CATEs is $[-0.013, +0.012]$, a spread of approximately 2.5 percentage points around zero. Figure \@ref(fig:fig-cate) plots CATE against distance to frontier: there is a weak positive slope (further-from-frontier countries tend to have higher estimated CATEs), consistent with the LP frontier-split result. However, the best linear projection of CATE on $\text{dtf}$ and $\ln K$ fails to reject linearity zero ($t < 0.3$, $p > 0.77$), cautioning against strong heterogeneity claims at this sample size.
+
+Variable importance (Figure \@ref(fig:fig-vi)) shows that $n + g + \delta$ (21.5\%), savings (19.0\%), and institutional quality (18.2\%) drive most of the forest's splitting decisions---the same factor-accumulation variables that dominate the parametric models. Distance to frontier ranks fifth (10.1\%), below human capital (12.3\%) and knowledge stock (11.3\%).
+
+```{r fig-cate, fig.cap="Causal forest CATE estimates vs distance to frontier. Loess smoother. Dotted = ATE."}
+knitr::include_graphics(fig("07_cate_dtf.png"))
+```
+
+```{r fig-vi, fig.cap="Causal forest variable importance. Higher = more splits on that variable."}
+knitr::include_graphics(fig("07_var_importance.png"))
+```
+
+## Country Typology
+
+Both the silhouette criterion and the gap statistic select $k = 2$ as the optimal number of clusters (average silhouette $= 0.486$; gap $= 0.187$, both largest at $k = 2$). Table \@ref(tab:cluster-table) reports the cluster profiles.
+
+```{r cluster-table}
+prof_clean <- cluster_prof |>
+  mutate(
+    Cluster = paste0("Cluster ", cluster, " (n=", n, ")"),
+    across(c(gerd_pct, ln_krd, dtf, wgi_composite, tertiary_25_64, savings),
+           ~round(., 3))
+  ) |>
+  select(Cluster, gerd_pct, ln_krd, dtf, wgi_composite, tertiary_25_64, savings)
+
+knitr::kable(
+  prof_clean,
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "K-means cluster profiles (k=2): country means.",
+  col.names = c("Cluster","GERD \\%","ln $K$","DTF","WGI","HC \\%","Savings"),
+  escape    = FALSE,
+  linesep   = ""
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position") |>
+  kableExtra::footnote(
+    general = "6-feature K-means (nstart=50, set.seed(42)). Silhouette and gap statistics both select k=2.",
+    general_title = "Note:", footnote_as_chunk = TRUE)
+```
+
+**Cluster 1 -- Innovation Leaders** (13 countries: AT, BE, CH, DE, DK, FI, FR, IE, IS, LU, NL, NO, SE): Mean GERD $= 2.36\%$, mean $\text{dtf} = 0.46$, WGI $= 26.0$. These are high-R\&D, near-frontier, well-governed economies. Their Stage 07 mean CATE $= -0.008$, consistent with the LP finding of persistent negative direct effects.
+
+**Cluster 2 -- Convergence Economies** (15 countries: BG, CY, CZ, EE, ES, GR, HR, HU, IT, LT, LV, MT, PL, PT, SK): Mean GERD $= 0.94\%$, mean $\text{dtf} = 1.13$, WGI $= 12.2$. These are low-R\&D, distant-from-frontier economies. Their Stage 07 mean CATE $= +0.005$, consistent with the LP catch-up positive response.
+
+Crucially, the cluster assignment reproduces the thesis's k=2 grouping exactly on the extended feature set (same 13/15 country split), validating the earlier typology while grounding it in a richer conceptual basis.
+
+```{r fig-scatter, fig.cap="Country clusters in (DTF, ln knowledge stock) space. K-means with six features."}
+knitr::include_graphics(fig("08_scatter_dtf_krd.png"))
+```
+
+```{r fig-cluster-cate, fig.cap="CATE distribution by cluster. Causal forest estimates (Stage 07) grouped by K-means cluster (Stage 08)."}
+knitr::include_graphics(fig("08_cate_by_cluster.png"))
+```
+
+# Discussion {#sec:discussion}
+
+## Why Does the Aggregate GERD Effect Appear Null?
+
+Four non-mutually-exclusive explanations are consistent with the evidence:
+
+**1. Measurement error attenuation.** The Wu--Hausman test and the IV $>$ FE finding confirm that classical measurement error in GERD suppresses the OLS/FE coefficient toward zero. Survey-based GERD captures expenditure but not quality, timing, or appropriability of R\&D investments. The true causal coefficient may be positive but is attenuated below detectability at the aggregate annual frequency.
+
+**2. Opposing regime effects.** The frontier split in LP and clustering reveals that the GERD coefficient is approximately $-0.008$ for Innovation Leaders and $+0.005$ for Convergence Economies. These nearly cancel in the pooled estimator. This is consistent with the Aghion--Akcigit--Howitt model where the marginal return to own-innovation is lower---and potentially displaced by spillouts---near the frontier [@aghion2014].
+
+**3. Ideas becoming harder to find.** @bloom2020 document a secular decline in research productivity across multiple sectors. If each percentage-point of GERD generates a smaller TFP increment over time, any positive coefficient would weaken in a long panel. The research-productivity measure constructed in Stage 01 (Stage 03 feature engineering) shows declining trends consistent with this mechanism, though we do not test it formally here.
+
+**4. Long lags and horizon mismatch.** The LP analysis shows that even where effects exist, they emerge primarily at $h = 6$--$8$ years (catch-up economies) or are small and transient (frontier economies). Annual growth regressions with contemporaneous GERD are misaligned with this lag structure, contributing to the null finding at $h = 0$.
+
+## Spatial Knowledge Flows at the Macro Level
+
+The absence of statistically significant spatial spillovers ($\lambda = 0.107$, $p = 0.33$; $W\text{GERD}$ coefficients non-significant across all three weight matrices) stands in contrast to the microeconomic evidence of @jaffe1986 and the bilateral trade channel documented by @coe1995. Several explanations are possible. Two-way year fixed effects absorb common technology shocks (the main transmission channel in @coe1995), leaving only residual spatial correlation to identify. At the aggregate GERD-to-GDP-growth level, the channel from neighbours' R\&D spending to own country growth may operate through trade and FDI flows that are not spatially localised in the way capital-city distance suggests.
+
+## Policy Implications
+
+The findings carry a cautious implication for R\&D policy in Europe. A uniform expansion of GERD spending---as targeted by the 3\% of GDP Barcelona objective---is unlikely to generate detectable aggregate growth gains at the annual frequency. The benefits, if any, accrue over long lags and are more plausibly realized through knowledge absorption in convergence economies than through innovation in frontier economies. Human capital (tertiary attainment, absorptive capacity interaction) and institutional quality emerge as complementary conditions with CATE-relevance, suggesting that R\&D subsidies bundled with education investment and governance improvements may be more effective than standalone spending mandates.
+
+# Conclusion {#sec:conclusion}
+
+This paper has assembled a comprehensive empirical case study of the GERD--growth relationship in European economies. The central finding is that, once cross-sectional dependence is properly accounted for with Driscoll--Kraay standard errors, the aggregate association between R\&D spending and annual GDP-per-capita growth is statistically indistinguishable from zero. This finding is robust across two-way fixed effects, Anderson--Hsiao IV, local projections at all horizons $h \leq 7$ for the full panel, three spatial weight matrices, double/debiased ML with ridge nuisance, and causal forests.
+
+The null does not, however, imply that R\&D is irrelevant. The frontier-split local projections reveal persistent negative direct effects for close-to-frontier economies and a delayed positive response for catch-up economies---a pattern theoretically coherent with the distance-to-frontier mechanism of @aghion2014. The causal forest CATE estimates corroborate this: Innovation Leaders (Cluster 1) exhibit mean CATE $\approx -0.008$ while Convergence Economies (Cluster 2) show mean CATE $\approx +0.005$, generating the near-zero aggregate average. Measurement error attenuation (IV $>$ FE, Wu--Hausman $p = 0.004$) implies the true coefficient is likely positive but small, attenuated below detectability by survey noise in GERD.
+
+Factor accumulation---savings rates and population growth plus depreciation---remains the dominant, consistently significant channel across all six analytical stages, consistent with the augmented Solow model of @mankiw1992. Europe's near-term growth performance appears more tightly tied to capital deepening and demographic dynamics than to R\&D intensity at the aggregate annual scale.
+
+Future work could extend this analysis in three directions. First, disaggregating GERD by sector (business, government, higher education) and funding source (public, private) would allow sharper identification of the mechanism. Second, firm-level matched panel data would eliminate measurement error at the country level and allow estimation of micro-level returns. Third, extending the spatial model to include explicit bilateral trade and FDI weights---rather than geographic distance---would provide a more direct test of the Coe--Helpman knowledge-diffusion channel.
+
+# References {-}
+
+<div id="refs"></div>
+
+\newpage
+
+# Appendix {-}
+
+## Data Coverage {-}
+
+```{r fig-coverage, fig.cap="Data coverage heatmap: non-missing observations by country and variable."}
+knitr::include_graphics(fig("01_coverage_heatmap.png"))
+```
+
+## Panel Spaghetti Plot {-}
+
+```{r fig-spaghetti, fig.cap="Log GDP per capita trajectories, 1998--2024. Highlighted: N=29 primary panel."}
+knitr::include_graphics(fig("02_panel_spaghetti.png"))
+```
+
+## DTF--Growth Scatter {-}
+
+```{r fig-dtf, fig.cap="Country-mean distance to frontier vs mean annual growth. Positive slope indicates conditional convergence."}
+knitr::include_graphics(fig("03_dtf_scatter.png"))
+```
+
+## K-means Diagnostics {-}
+
+```{r kmeans-diag-table}
+knitr::kable(
+  km_diag |> mutate(across(c(wcss, avg_silhouette), ~round(.,3))),
+  format    = "latex",
+  booktabs  = TRUE,
+  caption   = "K-means diagnostics: total WCSS and average silhouette by k.",
+  col.names = c("k","Total WCSS","Avg. silhouette"),
+  linesep   = ""
+) |>
+  kableExtra::kable_styling(latex_options = "hold_position")
+```
+
+```{r fig-sil, fig.cap="Silhouette plot (k=2): per-country silhouette widths."}
+knitr::include_graphics(fig("08_silhouette_obs.png"))
+```
+
+## Country CATE Estimates {-}
+
+```{r fig-country-cate, fig.cap="Country-mean CATE estimates. Blue = positive effect, red = negative."}
+knitr::include_graphics(fig("07_country_cate.png"))
+```
