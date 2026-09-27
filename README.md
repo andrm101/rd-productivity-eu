@@ -16,6 +16,22 @@ moderation, and cluster stability.
 **Panel:** N=29 (EU-25 + Ireland + Norway + Iceland + Switzerland), 1998–2024  
 **Stack:** Python (ingest, ML, visualisation) + R (econometrics) + DuckDB (bridge)
 
+📖 **[Full abstract, pre-registered hypothesis results (H1–H7), and methodology → project Wiki](https://github.com/andrm101/rd-productivity-eu/wiki)**
+
+---
+
+## Results at a glance
+
+<p align="center">
+  <img src="figures/04_fe_vs_iv.png" width="48%" alt="Fixed-effects vs IV coefficient comparison" />
+  <img src="figures/05_irf_split.png" width="48%" alt="Local projection impulse responses by frontier regime" />
+</p>
+
+<p align="center">
+  <img src="figures/07_cate_dtf.png" width="48%" alt="Causal forest CATE by distance-to-frontier" />
+  <img src="figures/08_cluster_profiles.png" width="48%" alt="K-means country typology cluster profiles" />
+</p>
+
 ---
 
 ## Architecture
