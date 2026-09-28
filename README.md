@@ -1,10 +1,12 @@
-# rd-productivity-eu
+<p align="center">
+  <img src="assets/brand-banner.svg" alt="rd-productivity-eu" width="100%">
+</p>
 
 **R&D → Productivity, EU Panel — Capstone Extension of 2025 Bachelor's Thesis**
 
 Andrei Manoloiu · MSc Data Science, SDU Kolding
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Project summary
 
@@ -18,7 +20,7 @@ moderation, and cluster stability.
 
 📖 **[Full abstract, pre-registered hypothesis results (H1–H7), and methodology → project Wiki](https://github.com/andrm101/rd-productivity-eu/wiki)**
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Results at a glance
 
@@ -32,7 +34,7 @@ moderation, and cluster stability.
   <img src="figures/08_cluster_profiles.png" width="48%" alt="K-means country typology cluster profiles" />
 </p>
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Architecture
 
@@ -70,7 +72,7 @@ Week 6  Stage 09 — Robustness         Rscript src/R/09_robustness.R
 Week 7  Stage 10 — Paper draft        reports/main.Rmd (rendered -> reports/main.pdf)
 ```
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Quick start
 
@@ -89,7 +91,7 @@ cat reports/01_audit_log.md
 Rscript src/R/02_replicate_thesis.R
 ```
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Manual data required
 
@@ -106,7 +108,7 @@ Expected columns for `heritage_ief.csv`:
 country_iso2, year, ief_overall, ief_rl, ief_gs, ief_re, ief_om
 ```
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Data vintage
 
@@ -114,7 +116,7 @@ All Eurostat series pinned to **2026-06 extract**. PWT version **10.01** (Feenst
 2015). Heritage IEF: document year on ingestion. Manifest files written to each
 `data/raw/<source>/manifest.jsonl`.
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Key hypotheses (pre-registered)
 
@@ -133,7 +135,7 @@ supported — the rest are genuine nulls, not forced to look positive.
 | H6 | Bootstrap-ARI ≥ 0.75 for k=2 clusters | Stage 09 (first test) | **Supported** (mean ARI=1.000, B=200) |
 | H7 | GERD coefficient smaller in 2011–2024 than 1998–2010 (Bloom et al.) | Stage 09 (first test; `reports/main.Rmd` previously noted this explicitly as untested) | Not supported (|coef| grew 0.002→0.014, opposite of the Bloom direction) |
 
----
+<img src="assets/brand-divider.svg" alt="" width="100%">
 
 ## Stage 01 gate
 

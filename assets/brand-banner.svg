@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="R&amp;D → Productivity, EU Panel. Panel econometrics · GMM/IV · spatial spillovers">
+  <rect width="1280" height="320" fill="#081A2F"/>
+  <g stroke="#355C7D" stroke-opacity="0.22" stroke-width="1">
+    <path d="M0 80H1280M0 160H1280M0 240H1280"/>
+    <path d="M320 0V320M640 0V320M960 0V320"/>
+  </g>
+  <g fill="none" stroke="#14B8A6" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M900 240H1000V160H1100V80H1180V160H1280"/>
+  </g>
+  <g fill="#081A2F" stroke="#14B8A6" stroke-width="3">
+    <rect x="992" y="232" width="16" height="16"/>
+    <rect x="1092" y="152" width="16" height="16"/>
+  </g>
+  <rect x="1172" y="72" width="16" height="16" fill="#14B8A6"/>
+  <g transform="translate(60 100)">
+    <line x1="55.2" y1="66.0" x2="19.4" y2="40.3" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="55.2" y1="66.0" x2="71.5" y2="102.0" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="102.4" y1="56.6" x2="79.3" y2="14.2" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="19.4" y1="40.3" x2="19.1" y2="91.0" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="19.4" y1="40.3" x2="39.6" y2="11.4" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="79.3" y1="14.2" x2="39.6" y2="11.4" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="108.2" y1="106.5" x2="71.5" y2="102.0" stroke="#355C7D" stroke-width="2.5"/>
+    <line x1="55.2" y1="66.0" x2="102.4" y2="56.6" stroke="#14B8A6" stroke-width="4"/>
+    <line x1="55.2" y1="66.0" x2="19.1" y2="91.0" stroke="#14B8A6" stroke-width="4"/>
+    <line x1="102.4" y1="56.6" x2="108.2" y2="106.5" stroke="#14B8A6" stroke-width="4"/>
+    <rect x="47.2" y="58.0" width="16" height="16" fill="#14B8A6"/>
+    <rect x="94.4" y="48.6" width="16" height="16" fill="#14B8A6"/>
+    <rect x="13.4" y="34.3" width="12" height="12" fill="#081A2F" stroke="#F4F7FA" stroke-width="2.5"/>
+    <rect x="11.1" y="83.0" width="16" height="16" fill="#14B8A6"/>
+    <rect x="73.3" y="8.2" width="12" height="12" fill="#081A2F" stroke="#F4F7FA" stroke-width="2.5"/>
+    <rect x="100.2" y="98.5" width="16" height="16" fill="#14B8A6"/>
+    <rect x="65.5" y="96.0" width="12" height="12" fill="#081A2F" stroke="#F4F7FA" stroke-width="2.5"/>
+    <rect x="33.6" y="5.4" width="12" height="12" fill="#081A2F" stroke="#F4F7FA" stroke-width="2.5"/>
+  </g>
+  <text x="220" y="140" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="-1.5" fill="#F4F7FA">R&amp;D → Productivity, EU Panel</text>
+  <text x="222" y="182" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="500" fill="#14B8A6">Panel econometrics · GMM/IV · spatial spillovers</text>
+  <text x="222" y="222" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="400" fill="#F4F7FA" fill-opacity="0.8">29 countries · 1998–2024 · causal forests and local projections</text>
+  <text x="222" y="258" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#F4F7FA" fill-opacity="0.55">Python · R · DuckDB</text>
+</svg>
